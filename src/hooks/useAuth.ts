@@ -20,26 +20,24 @@ export function useAuth() {
     setLoading(true);
     setError("");
     try {
-      // Primera llamada para comprobar el estado del correo
       const res = (await apiCall({ action: "login", correo: emailValue })) as LoginResponse;
       setEmail(emailValue);
 
-      // Si el servidor responde exitosamente
       if (res.success) {
-        // CASO 1: El usuario YA existe en la base de datos, exigimos el PIN de una
-        if (res.requireToken || !res.isNew) {
-          setStep("pin-existing");
-        } 
-        // CASO 2: El usuario NO existe (res.isNew es true), lo mandamos a registrar su nombre/usuario
-        else if (res.isNew) {
+        // CONTROL ESTRICTO: Si el backend dice que es NUEVO, obligatoriamente va a pantalla de registro
+        if (res.isNew === true) {
           setStep("register");
         } 
-        // Por si las moscas con usuarios viejos sin PIN asignado
+        // Si no es nuevo pero exige token (o ya tiene un PIN creado en la base de datos)
+        else if (res.requireToken === true || !res.isNew) {
+          setStep("pin-existing");
+        } 
+        // Si por alguna razón el backend devolvió el usuario listo sin pedir más nada
         else if (res.user) {
           setUser(res.user);
         }
       } else {
-        // Si el backend dice success: false pero es porque el usuario no existe, lo tratamos como registro
+        // Respaldo por si el backend rechaza la petición diciendo que no existe
         if (res.message && (res.message.toLowerCase().includes("no existe") || res.message.toLowerCase().includes("not found"))) {
           setStep("register");
         } else {
@@ -53,48 +51,44 @@ export function useAuth() {
     }
   }, []);
 
-  const registerUser = useCallback(
-    async (nameValue: string) => {
-      if (!nameValue.trim()) {
-        setError("Escribe tu nombre o apodo");
-        return;
-      }
-      setName(nameValue);
-      setStep("pin-new");
-    },
-    []
-  );
+  const registerUser = useCallback(async (nameValue: string) => {
+    if (!nameValue.trim()) {
+      setError("Escribe tu nombre o apodo");
+      return;
+    }
+    setName(nameValue);
+    // Cambia el flujo a la pantalla para crear el PIN NUEVO
+    setStep("pin-new");
+  }, []);
 
-  const submitPin = useCallback(
-    async (pinValue: string, isNew: boolean) => {
-      if (pinValue.length !== 4 || !/^\d{4}$/.test(pinValue)) {
-        setError("El PIN debe ser exactamente 4 números");
-        return;
-      }
-      setLoading(true);
-      setError("");
-      try {
-        const res = (await apiCall({
-          action: "login",
-          correo: email,
-          nombre: isNew ? name : undefined,
-          token: pinValue,
-        })) as LoginResponse;
+  const submitPin = useCallback(async (pinValue: string, isNew: boolean) => {
+    if (pinValue.length !== 4 || !/^\d{4}$/.test(pinValue)) {
+      setError("El PIN debe ser exactamente 4 números");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      // Mandamos la acción definitiva de registro o login pasándole el PIN
+      const res = (await apiCall({
+        action: "login",
+        correo: email,
+        nombre: isNew ? name : undefined,
+        token: pinValue,
+      })) as LoginResponse;
 
-        if (res.success && res.user) {
-          setUser(res.user);
-          // PIN verified successfully
-        } else {
-          setError(res.message || "PIN incorrecto");
-        }
-      } catch {
-        setError("Error de conexión");
-      } finally {
-        setLoading(false);
+      if (res.success && res.user) {
+        setUser(res.user);
+        setError("");
+      } else {
+        setError(res.message || "Error al procesar el PIN");
       }
-    },
-    [email, name]
-  );
+    } catch {
+      setError("Error de conexión");
+    } finally {
+      setLoading(false);
+    }
+  }, [email, name]);
 
   const logout = useCallback(() => {
     setUser(null);
