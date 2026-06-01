@@ -1,7 +1,6 @@
 import { Trophy, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MATCHES } from "@/lib/matches";
-import { getFlag } from "@/lib/flags";
 
 interface PronosticosTabProps {
   scores: Record<number, { home: string; away: string }>;
@@ -9,6 +8,25 @@ interface PronosticosTabProps {
   message: string;
   updateScore: (matchId: number, side: "home" | "away", value: string) => void;
   savePronos: () => void;
+}
+
+// Función mágica para convertir códigos de país ("MX", "BR") en emojis de banderas reales
+function getEmojiFlag(teamString: string) {
+  if (!teamString) return "🏳️";
+  // Extraemos las últimas dos letras del string por si viene como "MEXICO MX"
+  const words = teamString.trim().split(" ");
+  const countryCode = words[words.length - 1].toUpperCase();
+  
+  // Validamos que sea un código de dos letras legítimo
+  if (countryCode.length !== 2 || !/^[A-Z]{2}$/.test(countryCode)) {
+    return "🏳️"; // Bandera blanca si no se encuentra
+  }
+
+  // Conversión matemática a caracteres regionales de emoji
+  const codePoints = countryCode
+    .split("")
+    .map((char) =>  127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
 }
 
 export function PronosticosTab({
@@ -32,8 +50,9 @@ export function PronosticosTab({
 
       <div className="space-y-2">
         {MATCHES.map((m) => {
-          const flagHome = getFlag(m.home);
-          const flagAway = getFlag(m.away);
+          // Generamos el emoji de la bandera procesando el texto del país
+          const flagHome = getEmojiFlag(m.home);
+          const flagAway = getEmojiFlag(m.away);
           const sc = scores[m.id] || { home: "", away: "" };
 
           return (
@@ -55,7 +74,7 @@ export function PronosticosTab({
                   <span className="text-xs text-white font-semibold truncate text-right uppercase leading-tight">
                     {m.home}
                   </span>
-                  <span className="text-base leading-none select-none shrink-0">
+                  <span className="text-xl leading-none select-none shrink-0 filter drop-shadow">
                     {flagHome}
                   </span>
                 </div>
@@ -87,7 +106,7 @@ export function PronosticosTab({
 
                 {/* Away team - left aligned */}
                 <div className="flex items-center justify-start gap-2 min-w-0">
-                  <span className="text-base leading-none select-none shrink-0">
+                  <span className="text-xl leading-none select-none shrink-0 filter drop-shadow">
                     {flagAway}
                   </span>
                   <span className="text-xs text-white font-semibold truncate text-left uppercase leading-tight">
