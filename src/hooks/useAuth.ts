@@ -24,20 +24,22 @@ export function useAuth() {
       setEmail(emailValue);
 
       if (res.success) {
-        // CONTROL ESTRICTO: Si el backend dice que es NUEVO, obligatoriamente va a pantalla de registro
+        // Si el backend avisa explícitamente que es un usuario NUEVO
         if (res.isNew === true) {
           setStep("register");
         } 
-        // Si no es nuevo pero exige token (o ya tiene un PIN creado en la base de datos)
+        // Si es un usuario EXISTENTE que necesita poner su PIN
         else if (res.requireToken === true || !res.isNew) {
           setStep("pin-existing");
         } 
-        // Si por alguna razón el backend devolvió el usuario listo sin pedir más nada
+        // Solo entramos directo si el backend ya nos mandó el objeto de usuario completo
         else if (res.user) {
           setUser(res.user);
+        } else {
+          // Por descarte seguro, si no hay usuario, es que falta registrarse
+          setStep("register");
         }
       } else {
-        // Respaldo por si el backend rechaza la petición diciendo que no existe
         if (res.message && (res.message.toLowerCase().includes("no existe") || res.message.toLowerCase().includes("not found"))) {
           setStep("register");
         } else {
@@ -57,8 +59,7 @@ export function useAuth() {
       return;
     }
     setName(nameValue);
-    // Cambia el flujo a la pantalla para crear el PIN NUEVO
-    setStep("pin-new");
+    setStep("pin-new"); // Te manda a la pantalla de crear PIN de 4 dígitos
   }, []);
 
   const submitPin = useCallback(async (pinValue: string, isNew: boolean) => {
@@ -69,7 +70,7 @@ export function useAuth() {
     setLoading(true);
     setError("");
     try {
-      // Mandamos la acción definitiva de registro o login pasándole el PIN
+      // Mandamos los datos reales al Apps Script para que los guarde en las columnas limpias
       const res = (await apiCall({
         action: "login",
         correo: email,
@@ -81,7 +82,7 @@ export function useAuth() {
         setUser(res.user);
         setError("");
       } else {
-        setError(res.message || "Error al procesar el PIN");
+        setError(res.message || "PIN incorrecto");
       }
     } catch {
       setError("Error de conexión");
