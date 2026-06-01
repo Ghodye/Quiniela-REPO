@@ -10,22 +10,69 @@ interface PronosticosTabProps {
   savePronos: () => void;
 }
 
-// Función mágica para convertir códigos de país ("MX", "BR") en emojis de banderas reales
+// Función para convertir nombres de países o códigos de 2 letras en emojis de banderas reales
 function getEmojiFlag(teamString: string) {
   if (!teamString) return "🏳️";
-  // Extraemos las últimas dos letras del string por si viene como "MEXICO MX"
-  const words = teamString.trim().split(" ");
-  const countryCode = words[words.length - 1].toUpperCase();
   
-  // Validamos que sea un código de dos letras legítimo
-  if (countryCode.length !== 2 || !/^[A-Z]{2}$/.test(countryCode)) {
-    return "🏳️"; // Bandera blanca si no se encuentra
+  const nameUpper = teamString.trim().toUpperCase();
+
+  // Diccionario manual por si los países vienen con el nombre limpio en matches.ts
+  const countryToCode: Record<string, string> = {
+    "MEXICO": "MX",
+    "SUDAFRICA": "ZA",
+    "COREA DEL SUR": "KR",
+    "REPUBLICA CHECA": "CZ",
+    "BOSNIA Y HERZEGOVINA": "BA",
+    "EGIPTO": "EG",
+    "ESTADOS UNIDOS": "US",
+    "PARAGUAY": "PY",
+    "SUIZA": "CH",
+    "QATAR": "QA",
+    "BRASIL": "BR",
+    "MARRUECOS": "MA",
+    "HAITI": "HT",
+    "ESCOCIA": "GB",
+    "AUSTRALIA": "AU",
+    "TURQUIA": "TR",
+    "ALEMANIA": "DE",
+    "ARGENTINA": "AR",
+    "FRANCIA": "FR",
+    "ESPAÑA": "ES",
+    "ITALIA": "IT",
+    "INGLATERRA": "GB",
+    "PORTUGAL": "PT",
+    "PAISES BAJOS": "NL",
+    "URUGUAY": "UY",
+    "COLOMBIA": "CO",
+    "CHILE": "CL",
+    "PERU": "PE",
+    "ECUADOR": "EC",
+    "VENEZUELA": "VE",
+    "JAPON": "JP",
+    "REPUBLICA DE IRLANDA": "IE",
+    "IRLANDA DEL NORTE": "GB",
+    "GALES": "GB"
+  };
+
+  // 1. Intentamos buscar si el nombre completo coincide con nuestro diccionario
+  let code = countryToCode[nameUpper];
+
+  // 2. Si no coincide, extraemos las últimas dos letras por si viene como "MEXICO MX"
+  if (!code) {
+    const words = nameUpper.split(" ");
+    const lastWord = words[words.length - 1];
+    if (lastWord.length === 2 && /^[A-Z]{2}$/.test(lastWord)) {
+      code = lastWord;
+    }
   }
 
-  // Conversión matemática a caracteres regionales de emoji
-  const codePoints = countryCode
+  // 3. Si no encontramos ningún código válido de 2 letras, ponemos una bandera blanca genérica
+  if (!code) return "🏳️";
+
+  // Conversión matemática a caracteres regionales de emoji de bandera
+  const codePoints = code
     .split("")
-    .map((char) =>  127397 + char.charCodeAt(0));
+    .map((char) => 127397 + char.charCodeAt(0));
   return String.fromCodePoint(...codePoints);
 }
 
@@ -50,7 +97,7 @@ export function PronosticosTab({
 
       <div className="space-y-2">
         {MATCHES.map((m) => {
-          // Generamos el emoji de la bandera procesando el texto del país
+          // Generamos los emojis de las banderas procesando los nombres de los equipos
           const flagHome = getEmojiFlag(m.home);
           const flagAway = getEmojiFlag(m.away);
           const sc = scores[m.id] || { home: "", away: "" };
@@ -60,16 +107,16 @@ export function PronosticosTab({
               key={m.id}
               className="card-match rounded-xl border border-gray-800 overflow-hidden"
             >
-              {/* Header with match number */}
+              {/* Header con el número del partido */}
               <div className="bg-[#0d1117]/50 px-3 py-1 flex justify-between items-center">
                 <span className="text-[10px] font-mono text-gray-500 font-bold">
                   #{String(m.id).padStart(2, "0")}
                 </span>
               </div>
 
-              {/* Match body - 3 column grid */}
+              {/* Cuerpo del partido - Grid de 3 columnas */}
               <div className="px-2 py-3 grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
-                {/* Home team - right aligned */}
+                {/* Equipo Local - Alineado a la derecha */}
                 <div className="flex items-center justify-end gap-2 min-w-0">
                   <span className="text-xs text-white font-semibold truncate text-right uppercase leading-tight">
                     {m.home}
@@ -79,7 +126,7 @@ export function PronosticosTab({
                   </span>
                 </div>
 
-                {/* Center inputs */}
+                {/* Inputs de los marcadores en el centro */}
                 <div className="flex items-center gap-1 shrink-0">
                   <input
                     type="number"
@@ -104,7 +151,7 @@ export function PronosticosTab({
                   />
                 </div>
 
-                {/* Away team - left aligned */}
+                {/* Equipo Visitante - Alineado a la izquierda */}
                 <div className="flex items-center justify-start gap-2 min-w-0">
                   <span className="text-xl leading-none select-none shrink-0 filter drop-shadow">
                     {flagAway}
